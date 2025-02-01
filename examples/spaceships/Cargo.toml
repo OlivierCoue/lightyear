@@ -32,7 +32,7 @@ avian2d = { workspace = true, features = [
   "parallel",
   "serialize",
 ] }
-lightyear = { workspace = true, features = ["leafwing", "avian2d"] }
+lightyear = { workspace = true, features = ["leafwing", "avian2d", "visualizer"] }
 serde.workspace = true
 anyhow.workspace = true
 tracing.workspace = true

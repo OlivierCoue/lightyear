@@ -338,7 +338,7 @@ impl WallBundle {
 // Generate a BulletHitEvent so we can modify scores, show visual effects, etc.
 pub(crate) fn process_collisions(
     mut collision_event_reader: EventReader<Collision>,
-    bullet_q: Query<(&BulletMarker, &ColorComponent, &Position)>,
+    bullet_q: Query<(&BulletMarker, &ColorComponent, &Position), Without<Dead>>,
     player_q: Query<&Player>,
     mut commands: Commands,
     tick_manager: Res<TickManager>,
@@ -351,12 +351,9 @@ pub(crate) fn process_collisions(
     // which is why logic is duplicated twice here
     for Collision(contacts) in collision_event_reader.read() {
         if let Ok((bullet, col, bullet_pos)) = bullet_q.get(contacts.entity1) {
-            // despawn the bullet
-            if identity.is_server() {
-                commands.entity(contacts.entity1).despawn();
-            } else {
-                commands.entity(contacts.entity1).prediction_despawn();
-            }
+            // mark the bullet as dead
+            commands.entity(contacts.entity1).insert_if_new(Dead);
+
             let victim_client_id = player_q
                 .get(contacts.entity2)
                 .map_or(None, |victim_player| Some(victim_player.client_id));
@@ -370,11 +367,9 @@ pub(crate) fn process_collisions(
             hit_ev_writer.send(ev);
         }
         if let Ok((bullet, col, bullet_pos)) = bullet_q.get(contacts.entity2) {
-            if identity.is_server() {
-                commands.entity(contacts.entity2).despawn();
-            } else {
-                commands.entity(contacts.entity2).prediction_despawn();
-            }
+            // mark the bullet as dead
+            commands.entity(contacts.entity2).insert_if_new(Dead);
+
             let victim_client_id = player_q
                 .get(contacts.entity1)
                 .map_or(None, |victim_player| Some(victim_player.client_id));

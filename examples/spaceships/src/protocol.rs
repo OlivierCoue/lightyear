@@ -24,6 +24,10 @@ pub const SHIP_LENGTH: f32 = 32.0;
 // will always be consistent (= on the same tick)
 pub const REPLICATION_GROUP: ReplicationGroup = ReplicationGroup::new_id(1);
 
+// MarkedByBullet
+#[derive(Component, Serialize, Deserialize, Clone, Debug, PartialEq, Reflect)]
+pub(crate) struct Dead;
+
 // Bullet
 #[derive(Bundle)]
 pub(crate) struct BulletBundle {
@@ -262,6 +266,9 @@ impl Plugin for ProtocolPlugin {
             .add_prediction(ComponentSyncMode::Simple);
 
         // Fully replicated, but not visual, so no need for lerp/corrections:
+
+        app.register_component::<Dead>(ChannelDirection::ServerToClient)
+            .add_prediction(ComponentSyncMode::Full);
 
         app.register_component::<LinearVelocity>(ChannelDirection::ServerToClient)
             .add_prediction(ComponentSyncMode::Full);
