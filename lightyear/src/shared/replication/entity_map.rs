@@ -100,7 +100,7 @@ impl RemoteEntityMap {
     /// It's possible that the remote_entity was already mapped by the sender,
     /// in which case we don't want to map it again
     #[inline]
-    pub(crate) fn get_local(&self, remote_entity: Entity) -> Option<Entity> {
+    pub fn get_local(&self, remote_entity: Entity) -> Option<Entity> {
         let unmapped = Self::mark_unmapped(remote_entity);
         if Self::is_mapped(remote_entity) {
             trace!("Received entity {unmapped:?} was already mapped, returning it as is");
@@ -149,7 +149,7 @@ impl RemoteEntityMap {
 
     /// Get the remote entity corresponding to the local entity in the entity map
     #[inline]
-    pub(crate) fn get_remote(&self, local_entity: Entity) -> Option<Entity> {
+    pub fn get_remote(&self, local_entity: Entity) -> Option<Entity> {
         self.local_to_remote.get(&local_entity).copied()
     }
 
