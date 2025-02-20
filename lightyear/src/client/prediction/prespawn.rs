@@ -111,7 +111,7 @@ impl PreSpawnedPlayerObjectPlugin {
             &PreSpawnedPlayerObject,
             // only trigger this when the entity is received on the client via server-replication
             // (this is valid because Replicated is added before the components are inserted
-            Added<Replicated>,
+            With<Replicated>,
         >,
     ) {
         let confirmed_entity = trigger.entity();
