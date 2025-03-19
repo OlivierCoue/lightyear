@@ -4,6 +4,7 @@ use tracing::debug;
 
 use crate::client::components::Confirmed;
 use crate::client::connection::ConnectionManager;
+use crate::client::prediction::rollback::DisableRollback;
 use crate::client::prediction::Predicted;
 use crate::prelude::{ShouldBePredicted, TickManager};
 
@@ -36,9 +37,12 @@ pub(crate) fn spawn_predicted_entity(
         debug!("Received entity with ShouldBePredicted from server: {confirmed_entity:?}");
         // we need to spawn a predicted entity for this confirmed entity
         let predicted_entity = commands
-            .spawn(Predicted {
-                confirmed_entity: Some(confirmed_entity),
-            })
+            .spawn((
+                Predicted {
+                    confirmed_entity: Some(confirmed_entity),
+                },
+                DisableRollback,
+            ))
             .id();
         debug!(
             "Spawning predicted entity {:?} for confirmed: {:?}",
