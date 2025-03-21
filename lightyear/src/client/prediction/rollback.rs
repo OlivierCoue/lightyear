@@ -21,7 +21,7 @@ use crate::client::prediction::diagnostics::PredictionMetrics;
 use crate::client::prediction::resource::PredictionManager;
 use crate::prelude::{ComponentRegistry, HistoryState, PreSpawnedPlayerObject, Tick, TickManager};
 
-use super::predicted_history::PredictionHistory;
+use super::predicted_history::{self, PredictionHistory};
 use super::resource_history::ResourceHistory;
 use super::Predicted;
 
@@ -103,7 +103,79 @@ impl Rollback {
         *self.state.write().deref_mut() = RollbackState::ShouldRollback { current_tick: tick };
     }
 }
+pub(crate) fn sync_disable_rollbacks<C: SyncComponent>(
+    mut commands: Commands,
+    connection: Res<ConnectionManager>,
+    mut predicted_query: Query<
+        (Option<&mut C>, &mut PredictionHistory<C>),
+        (With<Predicted>, Without<Confirmed>, With<DisableRollback>),
+    >,
+    confirmed_query: Query<(Entity, Option<&C>, Ref<Confirmed>)>,
+) {
+    if !connection.received_new_server_tick() {
+        return;
+    }
 
+    for (confirmed_entity, confirmed_component, confirmed) in confirmed_query.iter() {
+        // 0. only check rollback when any entity in the replication group has been updated
+        // (i.e. the confirmed tick has been updated)
+        if !confirmed.is_changed() {
+            continue;
+        }
+
+        // 1. Get the predicted entity, and it's history
+        let Some(predicted_entity) = confirmed.predicted else {
+            continue;
+        };
+
+        let Ok((predicted_component, mut predicted_history)) =
+            predicted_query.get_mut(predicted_entity)
+        else {
+            continue;
+        };
+        let tick = confirmed.tick;
+        let history_value = predicted_history.pop_until_tick(tick);
+        let mut predicted_entity_mut = commands.entity(predicted_entity);
+
+        match confirmed_component {
+            // confirm does not exist, remove on predicted
+            None => {
+                predicted_history.add_remove(tick);
+                predicted_entity_mut.remove::<C>();
+            }
+            // confirm exist, update or insert on predicted
+            Some(confirmed_component) => {
+                let rollbacked_predicted_component = confirmed_component.clone();
+
+                // TODO: do i need to add this to the history?
+                predicted_history.add_update(tick, rollbacked_predicted_component.clone());
+                match predicted_component {
+                    None => {
+                        predicted_entity_mut.insert(rollbacked_predicted_component);
+                    }
+                    Some(mut predicted_component) => {
+                        // no need to do a correction if the predicted value from the history
+                        // is the same as the newly received confirmed value
+                        // (this can happen if you predict 2 entities A and B.
+                        //  A needs a rollback, but B was predicted correctly. In that case you don't want
+                        //  to do a correction for B)
+                        if let Some(HistoryState::Updated(prev)) = history_value {
+                            // TODO: use should_rollback function?
+                            if rollbacked_predicted_component == prev {
+                                // instead we just rollback the component value without correction
+                                *predicted_component = rollbacked_predicted_component.clone();
+                                continue;
+                            }
+                        }
+
+                        // update the component to the corrected value
+                        *predicted_component = rollbacked_predicted_component;
+                    }
+                };
+            }
+        };
+    }
+}
 /// Check if we need to do a rollback.
 /// We do this separately from `prepare_rollback` because even if component A is the same between predicted and confirmed,
 /// if component B is different we do a rollback for all components
