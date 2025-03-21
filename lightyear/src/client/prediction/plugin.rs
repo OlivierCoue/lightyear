@@ -28,7 +28,8 @@ use super::resource_history::{
 };
 use super::rollback::{
     check_rollback, increment_rollback_tick, prepare_rollback, prepare_rollback_non_networked,
-    prepare_rollback_prespawn, prepare_rollback_resource, run_rollback, Rollback, RollbackState,
+    prepare_rollback_prespawn, prepare_rollback_resource, run_rollback, sync_disable_rollbacks,
+    Rollback, RollbackState,
 };
 use super::spawn::spawn_predicted_entity;
 
@@ -305,7 +306,9 @@ pub fn add_prediction_systems<C: SyncComponent>(app: &mut App, prediction_mode: 
                 (
                     // for SyncMode::Full, we need to check if we need to rollback.
                     // TODO: for mode=simple/once, we still need to re-add the component if the entity ends up not being despawned!
-                    check_rollback::<C>.in_set(PredictionSet::CheckRollback),
+                    (sync_disable_rollbacks::<C>, check_rollback::<C>)
+                        .chain()
+                        .in_set(PredictionSet::CheckRollback),
                     (prepare_rollback::<C>, prepare_rollback_prespawn::<C>)
                         .in_set(PredictionSet::PrepareRollback),
                 ),
