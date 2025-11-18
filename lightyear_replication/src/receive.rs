@@ -881,7 +881,9 @@ impl GroupChannel {
                         entity_mut.despawn();
                     }
                 } else {
-                    error!("Received despawn for an entity that does not exist")
+                    debug!(
+                        "Received despawn for an entity that does not exist (can be because of prespawned entities that were despwaned before matched)"
+                    );
                 }
                 continue;
             }

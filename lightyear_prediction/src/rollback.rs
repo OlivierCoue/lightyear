@@ -720,7 +720,7 @@ pub(crate) fn prepare_rollback_resource<R: Resource + Clone>(
                     "Resource didn't exist at time of rollback, removing it"
                 );
                 // the resource didn't exist at the time, remove it!
-                commands.remove_resource::<R>();
+                // commands.remove_resource::<R>();
             }
         }
         Some(HistoryState::Updated(r)) => {
