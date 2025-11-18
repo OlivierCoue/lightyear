@@ -24,7 +24,7 @@ use lightyear_replication::prelude::ComponentRegistration;
 use lightyear_replication::registry::registry::{ComponentRegistry, LerpFn};
 use lightyear_replication::registry::{ComponentError, ComponentKind};
 use lightyear_utils::collections::HashMap;
-use tracing::{debug, trace, trace_span};
+use tracing::{debug, info, trace, trace_span};
 
 fn lerp<C: Ease + Clone>(start: C, other: C, t: f32) -> C {
     let curve = EasingCurve::new(start, other, EaseFunction::Linear);
@@ -220,8 +220,8 @@ impl PredictionRegistry {
                     .is_some_and(|history_value| history_value != HistoryState::Removed);
 
                 if should {
-                    debug!(
-                        "Should Rollback! Confirmed component does not exist, but history value exists",
+                    info!(
+                        "Should Rollback! Confirmed component {} does not exist, but history value exists", DebugName::type_name::<C>()
                     );
                     #[cfg(feature = "metrics")]
                     metrics::counter!(format!(
@@ -235,8 +235,8 @@ impl PredictionRegistry {
             // confirm exist. rollback if history value is different
             Some(c) => history_value.map_or_else(
                 || {
-                    debug!(
-                        "Should Rollback! Confirmed component exists, but history value does not exists",
+                    info!(
+                        "Should Rollback! Confirmed component {} exists, but history value does not exists", DebugName::type_name::<C>(),
                     );
                     #[cfg(feature = "metrics")]
                     metrics::counter!(format!(
@@ -250,7 +250,7 @@ impl PredictionRegistry {
                     HistoryState::Updated(history_value) => {
                         let should = self.should_rollback(&c.0, &history_value);
                         if should {
-                            debug!(
+                            info!(
                                 "Should Rollback! Confirmed value {c:?} is different from history value {history_value:?}",
                             );
                             #[cfg(feature = "metrics")]
@@ -263,8 +263,8 @@ impl PredictionRegistry {
                         should
                     }
                     HistoryState::Removed => {
-                        debug!(
-                            "Should Rollback! Confirmed component exists, but history value does not exists",
+                        info!(
+                            "Should Rollback! Confirmed {} component exists, but history value was removed", DebugName::type_name::<C>()
                         );
                         #[cfg(feature = "metrics")]
                         metrics::counter!(format!(
