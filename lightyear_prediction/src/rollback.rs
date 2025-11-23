@@ -389,11 +389,12 @@ fn check_rollback(
                     component_registry.component_metadata_map.contains_key(kind).then_some(p.check_rollback)
                 )
                 .take_while(|_| !prediction_manager.is_rollback()) {
-                if check_rollback(&prediction_registry, confirmed_tick, &mut entity_mut) {
+                if let Some(rollback_source) = check_rollback(&prediction_registry, confirmed_tick, &mut entity_mut) {
                     debug!("Rollback because we have received a new confirmed state. (mismatch check)");
                     // During `prepare_rollback` we will reset the component to their values on `confirmed_tick`.
                     // Then when we do Rollback in PreUpdate, we will start by incrementing the tick, which will be equal to `confirmed_tick + 1`
                     parallel_commands.command_scope(|mut c| {
+                        c.trigger(rollback_source);
                         do_rollback(confirmed_tick, &prediction_manager, &mut c, Rollback::FromState);
                     });
                     return;

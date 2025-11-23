@@ -3,7 +3,7 @@ use crate::plugin::{
     add_non_networked_rollback_systems, add_prediction_systems, add_resource_rollback_systems,
 };
 use crate::predicted_history::PredictionHistory;
-#[cfg(feature = "metrics")]
+// #[cfg(feature = "metrics")]
 use alloc::format;
 use bevy_app::App;
 use bevy_ecs::component::ComponentId;
@@ -14,6 +14,7 @@ use bevy_math::{
     Curve,
     curve::{Ease, EaseFunction, EasingCurve},
 };
+use bevy_platform::prelude::String;
 use bevy_utils::prelude::DebugName;
 use core::fmt::Debug;
 use lightyear_core::history_buffer::HistoryState;
@@ -29,6 +30,12 @@ use tracing::{debug, info, trace, trace_span};
 fn lerp<C: Ease + Clone>(start: C, other: C, t: f32) -> C {
     let curve = EasingCurve::new(start, other, EaseFunction::Linear);
     curve.sample_unchecked(t)
+}
+
+#[derive(Event)]
+pub struct RollbackSource {
+    pub component: String,
+    pub entity: Entity,
 }
 
 #[derive(Debug, Clone)]
@@ -57,8 +64,11 @@ impl PredictionMetadata {
 
 /// Function that will check if we should do a rollback by comparing the confirmed component value
 /// with the predicted component's history.
-type CheckRollbackFn =
-    fn(&PredictionRegistry, confirmed_tick: Tick, entity_mut: &mut FilteredEntityMut) -> bool;
+type CheckRollbackFn = fn(
+    &PredictionRegistry,
+    confirmed_tick: Tick,
+    entity_mut: &mut FilteredEntityMut,
+) -> Option<RollbackSource>;
 
 /// Type-erased function for calling `pop_until_tick` and then `hash` on a [`PredictionHistory<C>`] component.
 /// The function fn should be of type fn(&C, &mut seahash::SeaHasher) and will be called with the value popped from the history.
@@ -185,7 +195,7 @@ impl PredictionRegistry {
         &self,
         confirmed_tick: Tick,
         entity_mut: &mut FilteredEntityMut,
-    ) -> bool {
+    ) -> Option<RollbackSource> {
         let entity = entity_mut.entity();
         let name = DebugName::type_name::<C>();
         let _span = trace_span!(
@@ -200,7 +210,7 @@ impl PredictionRegistry {
         //  (requires mutable aliasing)
         // note: it should not be possible that the PredictionHistory is present but not the Confirmed component.
         let Some(mut predicted_history) = entity_mut.get_mut::<PredictionHistory<C>>() else {
-            return false;
+            return None;
         };
         #[cfg(feature = "metrics")]
         metrics::gauge!(format!(
@@ -220,59 +230,81 @@ impl PredictionRegistry {
                     .is_some_and(|history_value| history_value != HistoryState::Removed);
 
                 if should {
-                    info!(
-                        "Should Rollback! Confirmed component {} does not exist, but history value exists", DebugName::type_name::<C>()
-                    );
+                    // info!(
+                    //     "Should Rollback! Confirmed component {} does not exist, but history value exists", DebugName::type_name::<C>()
+                    // );
                     #[cfg(feature = "metrics")]
                     metrics::counter!(format!(
                         "prediction::rollbacks::causes::{}::missing_on_confirmed",
                         DebugName::type_name::<C>()
                     ))
-                    .increment(1)
+                    .increment(1);
+                    return Some(RollbackSource {
+                        component: format!(
+                            "Should Rollback! Confirmed component {} does not exist, but history value exists", DebugName::type_name::<C>()
+                        ),
+                        entity,
+                    });
                 }
-                should
+                None
             }
             // confirm exist. rollback if history value is different
             Some(c) => history_value.map_or_else(
                 || {
-                    info!(
-                        "Should Rollback! Confirmed component {} exists, but history value does not exists", DebugName::type_name::<C>(),
-                    );
+                    // info!(
+                    //     "Should Rollback! Confirmed component {} exists, but history value does not exists", DebugName::type_name::<C>(),
+                    // );
                     #[cfg(feature = "metrics")]
                     metrics::counter!(format!(
                         "prediction::rollbacks::causes::{}::missing_on_predicted",
                         DebugName::type_name::<C>()
                     ))
                     .increment(1);
-                    true
+                    return Some(RollbackSource {
+                        component: format!(
+                            "Should Rollback! Confirmed component {} exists, but history value does not exists", DebugName::type_name::<C>(),
+                        ),
+                        entity,
+                    });
                 },
                 |history_value| match history_value {
                     HistoryState::Updated(history_value) => {
                         let should = self.should_rollback(&c.0, &history_value);
                         if should {
-                            info!(
-                                "Should Rollback! Confirmed value {c:?} is different from history value {history_value:?}",
-                            );
+                            // info!(
+                            //     "Should Rollback! Confirmed value {c:?} is different from history value {history_value:?}",
+                            // );
                             #[cfg(feature = "metrics")]
                             metrics::counter!(format!(
                                 "prediction::rollbacks::causes::{}::value_mismatch",
                                 DebugName::type_name::<C>()
                             ))
                             .increment(1);
+                            return Some(RollbackSource {
+                                component: format!(
+                                    "Should Rollback! Confirmed value {c:?} is different from history value {history_value:?}",
+                                ),
+                                entity,
+                            });
                         }
-                        should
+                        None
                     }
                     HistoryState::Removed => {
-                        info!(
-                            "Should Rollback! Confirmed {} component exists, but history value was removed", DebugName::type_name::<C>()
-                        );
+                        // info!(
+                        //     "Should Rollback! Confirmed {} component exists, but history value was removed", DebugName::type_name::<C>()
+                        // );
                         #[cfg(feature = "metrics")]
                         metrics::counter!(format!(
                             "prediction::rollbacks::causes::{}::removed_on_predicted",
                             DebugName::type_name::<C>()
                         ))
                         .increment(1);
-                        true
+                        return Some(RollbackSource {
+                            component: format!(
+                                "Should Rollback! Confirmed {} component exists, but history value was removed", DebugName::type_name::<C>()
+                            ),
+                            entity,
+                        });
                     }
                 },
             ),
