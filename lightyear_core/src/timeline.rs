@@ -111,6 +111,12 @@ impl TimelineContext for Local {}
 #[derive(Component, Deref, DerefMut, Default, Clone, Reflect)]
 pub struct LocalTimeline(Timeline<Local>);
 
+impl LocalTimeline {
+    pub fn reset(&mut self) {
+        self.set_now(TickInstant::default());
+    }
+}
+
 /// Increment the local tick at each FixedUpdate
 pub(crate) fn increment_local_tick(mut query: Query<&mut LocalTimeline>) {
     query.iter_mut().for_each(|mut t| {
