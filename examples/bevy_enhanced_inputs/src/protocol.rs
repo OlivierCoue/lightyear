@@ -30,9 +30,16 @@ pub struct PlayerColor(pub(crate) Color);
 #[derive(Component, Serialize, Deserialize, Reflect, Clone, Debug, PartialEq)]
 pub struct Player;
 
+#[derive(Component, Serialize, Deserialize, Reflect, Clone, Debug, PartialEq)]
+pub struct Projectile;
+
 #[derive(Debug, InputAction)]
 #[action_output(Vec2)]
 pub struct Movement;
+
+#[derive(Debug, InputAction)]
+#[action_output(bool)]
+pub struct Shoot;
 
 // Protocol
 #[derive(Clone)]
@@ -48,9 +55,11 @@ impl Plugin for ProtocolPlugin {
             },
         });
         app.register_input_action::<Movement>();
+        app.register_input_action::<Shoot>();
 
         // components
         app.register_component::<PlayerId>();
+        app.register_component::<Projectile>();
 
         app.register_component::<PlayerPosition>()
             .add_prediction()

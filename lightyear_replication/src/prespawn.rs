@@ -260,7 +260,7 @@ impl PreSpawnedReceiver {
             {
                 metrics::counter!("prespawn::no_match").increment(1);
             }
-            debug!(
+            info!(
                 ?hash,
                 "Received a PreSpawned entity {entity:?} from the remote with a hash that does not match any prespawned entity"
             );

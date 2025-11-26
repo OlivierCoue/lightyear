@@ -1,7 +1,7 @@
 use core::net::{IpAddr, Ipv4Addr, SocketAddr};
 use core::time::Duration;
 
-pub const FIXED_TIMESTEP_HZ: f64 = 64.0;
+pub const FIXED_TIMESTEP_HZ: f64 = 60.0;
 pub const SERVER_PORT: u16 = 5888;
 /// 0 means that the OS will assign any available port
 pub const CLIENT_PORT: u16 = 0;
@@ -14,7 +14,7 @@ pub const SHARED_SETTINGS: SharedSettings = SharedSettings {
     ],
 };
 
-pub const SEND_INTERVAL: Duration = Duration::from_millis(100);
+pub const SEND_INTERVAL: Duration = Duration::from_millis(16);
 
 pub const STEAM_APP_ID: u32 = 480; // Steamworks App ID for Spacewar, used for testing
 

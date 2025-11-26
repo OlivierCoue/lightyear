@@ -15,6 +15,7 @@ impl Plugin for SharedPlugin {
         app.add_plugins(ProtocolPlugin);
         app.add_systems(FixedPostUpdate, fixed_post_log);
         app.add_systems(Update, confirmed_log);
+        app.add_systems(FixedUpdate, projectile_movement);
         app.add_systems(PostUpdate, interpolate_log);
     }
 }
@@ -29,6 +30,18 @@ pub(crate) fn shared_movement_behaviour(mut position: Mut<PlayerPosition>, input
     const MOVE_SPEED: f32 = 10.0;
     position.y += input.y * MOVE_SPEED;
     position.x += input.x * MOVE_SPEED;
+}
+
+pub(crate) fn projectile_movement(
+    mut projectile_q: Query<(Entity, &mut PlayerPosition), With<Projectile>>,
+    mut commands: Commands,
+) {
+    for (entity, mut position) in projectile_q.iter_mut() {
+        position.0.x -= 5.0;
+        if position.0.x < -500.0 {
+            commands.entity(entity).prediction_despawn();
+        }
+    }
 }
 
 pub(crate) fn confirmed_log(

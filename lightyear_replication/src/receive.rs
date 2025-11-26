@@ -434,13 +434,13 @@ impl ReplicationReceiver {
                     // TODO: should we store the message in a buffer if it's in the future,
                     //  and only apply it at the correct tick?
                     // // if the message is from the future, keep it there
-                    // if *remote_tick > current_tick {
-                    //     debug!(
-                    //         "message tick {:?} is from the future compared to our current tick {:?}",
-                    //         remote_tick, current_tick
-                    //     );
-                    //     return;
-                    // }
+                    if *remote_tick >= current_tick {
+                        info!(
+                            "message tick {:?} is from the future compared to our current tick {:?}",
+                            remote_tick, current_tick
+                        );
+                        // return;
+                    }
 
                     // We have received the message we are waiting for
                     let (remote_tick, message) = channel

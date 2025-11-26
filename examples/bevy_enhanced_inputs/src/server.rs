@@ -21,6 +21,7 @@ impl Plugin for ExampleServerPlugin {
     fn build(&self, app: &mut App) {
         // the physics/FixedUpdates systems that consume inputs should be run in this set.
         app.add_observer(movement);
+        app.add_observer(shoot);
         app.add_observer(handle_new_client);
         app.add_observer(handle_connected);
     }
@@ -33,7 +34,7 @@ impl Plugin for ExampleServerPlugin {
 /// will enable us to replicate local entities to that client.
 pub(crate) fn handle_new_client(trigger: On<Add, LinkOf>, mut commands: Commands) {
     commands.entity(trigger.entity).insert((
-        ReplicationSender::new(SEND_INTERVAL, SendUpdatesMode::SinceLastAck, false),
+        ReplicationSender::new(SEND_INTERVAL, SendUpdatesMode::SinceLastAck, true),
         // We need a ReplicationReceiver on the server side because the Action entities are spawned
         // on the client and replicated to the server.
         ReplicationReceiver::default(),
@@ -99,4 +100,14 @@ fn movement(
     if let Ok(position) = position_query.get_mut(trigger.context) {
         shared::shared_movement_behaviour(position, trigger.value);
     }
+}
+
+fn shoot(trigger: On<Fire<Shoot>>, mut commands: Commands) {
+    commands.spawn((
+        Projectile,
+        PlayerPosition(Vec2::ZERO),
+        PreSpawned::default(),
+        Replicate::to_clients(NetworkTarget::All),
+        PredictionTarget::to_clients(NetworkTarget::All),
+    ));
 }

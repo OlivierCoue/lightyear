@@ -91,6 +91,10 @@ fn add_input_delay(app: &mut App) {
     app.world_mut()
         .entity_mut(client)
         .insert(InputTimeline(Timeline::from(
-            Input::default().with_input_delay(InputDelayConfig::fixed_input_delay(10)),
+            Input::default().with_input_delay(InputDelayConfig {
+                minimum_input_delay_ticks: 4,
+                maximum_input_delay_before_prediction: 100,
+                maximum_predicted_ticks: 100,
+            }),
         )));
 }

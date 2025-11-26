@@ -5,10 +5,13 @@
 //! - applying inputs to the locally predicted player (for prediction to work, inputs have to be applied to both the
 //!   predicted entity and the server entity)
 
+use std::thread::sleep;
+use std::time::Duration;
+
 use crate::protocol::*;
 use crate::shared;
 use bevy::prelude::*;
-use lightyear::input::bei::prelude::{Action, ActionOf, Bindings, Cardinal, Fire};
+use lightyear::input::bei::prelude::{bindings, Action, ActionOf, Bindings, Cardinal, Fire};
 use lightyear::prelude::*;
 
 pub struct ExampleClientPlugin;
@@ -18,6 +21,12 @@ impl Plugin for ExampleClientPlugin {
         app.add_observer(handle_predicted_spawn);
         app.add_observer(handle_interpolated_spawn);
         app.add_observer(player_movement);
+        app.add_observer(player_shoot);
+        app.add_systems(
+            FixedUpdate,
+            // simulate some client-side workload increase to 16 to really see rollback due to ticks from future
+            || sleep(Duration::from_millis(10)),
+        );
     }
 }
 
@@ -33,6 +42,14 @@ fn player_movement(
         // getting a mutable reference triggers change detection, unless you use `as_deref_mut()`
         shared::shared_movement_behaviour(position, trigger.value);
     }
+}
+
+fn player_shoot(trigger: On<Fire<Shoot>>, mut commands: Commands) {
+    commands.spawn((
+        Projectile,
+        PlayerPosition(Vec2::ZERO),
+        PreSpawned::default(),
+    ));
 }
 
 /// When the predicted copy of the client-owned entity is spawned, do stuff
@@ -57,6 +74,11 @@ pub(crate) fn handle_predicted_spawn(
                 ActionOf::<Player>::new(entity),
                 Action::<Movement>::new(),
                 Bindings::spawn(Cardinal::wasd_keys()),
+            ));
+            commands.spawn((
+                ActionOf::<Player>::new(entity),
+                Action::<Shoot>::new(),
+                bindings![MouseButton::Right],
             ));
         }
     }

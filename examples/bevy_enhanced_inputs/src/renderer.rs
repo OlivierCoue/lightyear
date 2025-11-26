@@ -1,4 +1,5 @@
 use crate::protocol::*;
+use bevy::color::palettes::css::*;
 use bevy::prelude::*;
 
 #[derive(Clone)]
@@ -10,6 +11,7 @@ impl Plugin for ExampleRendererPlugin {
         #[cfg(feature = "client")]
         app.add_systems(Startup, rollback_button);
         app.add_systems(Update, draw_boxes);
+        app.add_systems(Update, draw_projectile);
     }
 }
 
@@ -25,6 +27,19 @@ pub(crate) fn draw_boxes(mut gizmos: Gizmos, players: Query<(&PlayerPosition, &P
             Isometry2d::from_translation(position.0),
             Vec2::ONE * 50.0,
             color.0,
+        );
+    }
+}
+
+pub(crate) fn draw_projectile(
+    mut gizmos: Gizmos,
+    projectiles: Query<&PlayerPosition, With<Projectile>>,
+) {
+    for position in &projectiles {
+        gizmos.rect_2d(
+            Isometry2d::from_translation(position.0),
+            Vec2::ONE * 10.0,
+            YELLOW,
         );
     }
 }
