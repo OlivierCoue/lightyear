@@ -87,7 +87,7 @@ impl InputRegistryPlugin {
     pub(crate) fn on_action_of_replicated<C: Component>(
         trigger: On<Add, ActionOf<C>>,
         query: Query<&ActionOf<C>, With<Replicated>>,
-        mut host: Query<&mut MessageManager, With<HostClient>>,
+        #[cfg(feature = "client")] mut host: Query<&mut MessageManager, With<HostClient>>,
         _: Single<(), With<Server>>,
         config: Res<ServerInputConfig<C>>,
         mut commands: Commands,
@@ -111,13 +111,16 @@ impl InputRegistryPlugin {
                     InterpolationTarget::manual(alloc::vec![]),
                 ));
 
-                // This is subtle. The client-of receives the entity, and will try to rebroadcast input messages
-                // to other clients. But the host-server client won't apply entity-mapping correctly for that
-                // action entity because it doesn't receive replication messages, so its entity map is empty!
-                // A long-term solution might be to have the HostClient contain EVERY replicated entity in its
-                // entity-map, but for now let's just add the action entity
-                if let Ok(mut message_manager) = host.single_mut() {
-                    message_manager.entity_mapper.insert(entity, entity);
+                #[cfg(feature = "client")]
+                {
+                    // This is subtle. The client-of receives the entity, and will try to rebroadcast input messages
+                    // to other clients. But the host-server client won't apply entity-mapping correctly for that
+                    // action entity because it doesn't receive replication messages, so its entity map is empty!
+                    // A long-term solution might be to have the HostClient contain EVERY replicated entity in its
+                    // entity-map, but for now let's just add the action entity
+                    if let Ok(mut message_manager) = host.single_mut() {
+                        message_manager.entity_mapper.insert(entity, entity);
+                    }
                 }
             }
         }
