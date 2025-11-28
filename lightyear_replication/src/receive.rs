@@ -28,7 +28,7 @@ use crate::{plugin, prespawn};
 use lightyear_connection::client::{Connected, Disconnected, PeerMetadata};
 use lightyear_connection::host::HostClient;
 use lightyear_core::id::{PeerId, RemoteId};
-use lightyear_core::interpolation::Interpolated;
+use lightyear_core::interpolation::{Interpolated, InterpolatedDespawnedMarker};
 use lightyear_core::prelude::{LocalTimeline, Predicted};
 use lightyear_core::timeline::NetworkTimeline;
 use lightyear_messages::MessageManager;
@@ -877,8 +877,14 @@ impl GroupChannel {
                         self.local_entities.remove(&local_entity);
                     }
                     // TODO: we despawn all children as well right now, but that might not be what we want?
-                    if let Ok(entity_mut) = world.get_entity_mut(local_entity) {
-                        entity_mut.despawn();
+
+                    if let Ok(mut entity_mut) = world.get_entity_mut(local_entity) {
+                        let interpolated = entity_mut.get::<Interpolated>().is_some();
+                        if interpolated {
+                            entity_mut.insert(InterpolatedDespawnedMarker);
+                        } else {
+                            entity_mut.despawn();
+                        }
                     }
                 } else {
                     debug!(
