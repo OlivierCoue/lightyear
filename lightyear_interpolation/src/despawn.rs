@@ -1,6 +1,6 @@
 use crate::interpolation_history::ConfirmedHistory;
 use bevy_ecs::prelude::*;
-use lightyear_core::interpolation::Interpolated;
+use lightyear_core::interpolation::{Interpolated, InterpolatedDespawnedMarker};
 use lightyear_replication::prelude::Confirmed;
 
 /// Remove the component from interpolated entities when the confirmed component gets removed
@@ -17,6 +17,16 @@ pub(crate) fn removed_components<C: Component>(
     }
 }
 
-// TODO: we should despawn interpolated only when it reaches the latest confirmed snapshot?
-//  I suppose we could add a DespawnedMarker, and the entity would get despawned as soon as it reaches the end of interpolation...
-//  not super priority but would be a nice to have
+pub(crate) fn interpolated_despawn<C: Component>(
+    mut commands: Commands,
+    query: Query<
+        (Entity, &ConfirmedHistory<C>),
+        (With<Interpolated>, With<InterpolatedDespawnedMarker>),
+    >,
+) {
+    for (entity, history) in query.iter() {
+        if history.len() <= 1 {
+            commands.entity(entity).despawn();
+        }
+    }
+}

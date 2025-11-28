@@ -15,3 +15,7 @@ use bevy_reflect::Reflect;
 #[derive(Debug, Reflect, Component)]
 #[reflect(Component)]
 pub struct Interpolated;
+
+#[derive(Debug, Reflect, Component)]
+#[reflect(Component)]
+pub struct InterpolatedDespawnedMarker;
