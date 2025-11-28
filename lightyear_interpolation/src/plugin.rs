@@ -1,6 +1,6 @@
 use super::interpolation_history::{apply_confirmed_update, insert_confirmed_history};
 use crate::SyncComponent;
-use crate::despawn::removed_components;
+use crate::despawn::{interpolated_despawn, removed_components};
 use crate::interpolate::{interpolate, update_confirmed_history};
 use crate::registry::InterpolationRegistry;
 use crate::timeline::TimelinePlugin;
@@ -115,7 +115,9 @@ pub(crate) fn add_prepare_interpolation_systems<C: Component + Clone>(app: &mut 
 pub fn add_interpolation_systems<C: SyncComponent>(app: &mut App) {
     app.add_systems(
         Update,
-        interpolate::<C>.in_set(InterpolationSystems::Interpolate),
+        (interpolate::<C>, interpolated_despawn::<C>)
+            .chain()
+            .in_set(InterpolationSystems::Interpolate),
     );
 }
 
