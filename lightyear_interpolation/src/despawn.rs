@@ -26,7 +26,7 @@ pub(crate) fn interpolated_despawn<C: Component>(
 ) {
     for (entity, history) in query.iter() {
         if history.len() <= 1 {
-            commands.entity(entity).despawn();
+            commands.entity(entity).try_despawn();
         }
     }
 }
