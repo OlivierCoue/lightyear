@@ -70,8 +70,7 @@ pub(crate) fn handle_connected(
             Position(Vec2::ZERO),
             PlayerColor(color),
             Replicate::to_clients(NetworkTarget::All),
-            PredictionTarget::to_clients(NetworkTarget::Single(client_id)),
-            InterpolationTarget::to_clients(NetworkTarget::AllExceptSingle(client_id)),
+            InterpolationTarget::to_clients(NetworkTarget::All),
             ControlledBy {
                 owner: trigger.entity,
                 lifetime: Default::default(),

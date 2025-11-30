@@ -15,9 +15,7 @@ impl Plugin for ExampleClientPlugin {
             // Inputs have to be buffered in the WriteClientInputs set
             buffer_input.in_set(InputSystems::WriteClientInputs),
         );
-        app.add_systems(FixedUpdate, movement);
         app.add_observer(handle_interpolated_spawn);
-        app.add_observer(handle_predicted_spawn);
     }
 }
 
@@ -49,49 +47,24 @@ pub(crate) fn buffer_input(
     }
 }
 
-pub(crate) fn movement(
-    // TODO: maybe make prediction mode a separate component!!!
-    mut position_query: Query<(&mut Position, &ActionState<Inputs>), With<Predicted>>,
-) {
-    for (position, input) in position_query.iter_mut() {
-        shared_movement_behaviour(position, input);
-    }
-}
-
-/// When the predicted copy of the client-owned entity is spawned, do stuff
-/// - assign it a different saturation
-/// - keep track of it in the Global resource
-pub(crate) fn handle_predicted_spawn(
-    trigger: On<Add, (PlayerId, Predicted)>,
-    mut predicted: Query<&mut PlayerColor, With<Predicted>>,
-    mut commands: Commands,
-) {
-    let entity = trigger.entity;
-    if let Ok(mut color) = predicted.get_mut(entity) {
-        let hsva = Hsva {
-            saturation: 0.4,
-            ..Hsva::from(color.0)
-        };
-        color.0 = Color::from(hsva);
-        warn!("Add InputMarker to entity: {:?}", entity);
-        commands
-            .entity(entity)
-            .insert(InputMarker::<Inputs>::default());
-    }
-}
-
 /// When the predicted copy of the client-owned entity is spawned, do stuff
 /// - assign it a different saturation
 /// - keep track of it in the Global resource
 pub(crate) fn handle_interpolated_spawn(
     trigger: On<Add, PlayerColor>,
-    mut interpolated: Query<&mut PlayerColor, With<Interpolated>>,
+    mut commands: Commands,
+    mut interpolated: Query<(&mut PlayerColor, Has<Controlled>), With<Interpolated>>,
 ) {
-    if let Ok(mut color) = interpolated.get_mut(trigger.entity) {
+    if let Ok((mut color, is_controlled)) = interpolated.get_mut(trigger.entity) {
         let hsva = Hsva {
             saturation: 0.1,
             ..Hsva::from(color.0)
         };
         color.0 = Color::from(hsva);
+        if is_controlled {
+            commands
+                .entity(trigger.entity)
+                .insert(InputMarker::<Inputs>::default());
+        }
     }
 }

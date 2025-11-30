@@ -54,7 +54,7 @@ impl ExampleClient {
                 LocalAddr(client_addr),
                 PeerAddr(settings.server_addr),
                 ReplicationReceiver::default(),
-                PredictionManager::default(),
+                // PredictionManager::default(),
                 Name::from("Client"),
             ));
 
